@@ -992,6 +992,7 @@
       <div class="btn-row">
         <button class="btn" onclick="clearForm()">Clear</button>
         <button class="btn" onclick="exportTxt()">Export .txt</button>
+        <button class="btn" onclick="exportPdf()">Save as PDF</button>
         <!-- Save draft now calls Firebase instead of just localStorage -->
         <button class="btn btn-primary" onclick="saveForm()">Save to cloud</button>
       </div>
@@ -1310,6 +1311,80 @@
       a.download = d.project.replace(/\s+/g, '-').toLowerCase() + '.txt';
       a.click();
       showToast('Exported');
+    };
+
+    // ---- EXPORT AS PDF ----
+    // Builds a clean, formatted HTML document from all form data and opens the browser print dialog.
+    // The user can then choose "Save as PDF" in the print dialog.
+    window.exportPdf = function () {
+      const d = gatherData();
+      const sketchImg = d.sketch && d.sketch !== 'data:,' ? `<img src="${d.sketch}" style="width:100%;max-height:300px;object-fit:contain;border:1px solid #e8e4dc;border-radius:4px;margin-top:8px;">` : '<p style="color:#bbb;font-style:italic;">No sketch added.</p>';
+
+      // Helper: renders a label+value block only if the value is non-empty
+      const row = (label, val) => val && val.trim()
+        ? `<div style="margin-bottom:20px;"><div style="font-family:monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#888;margin-bottom:4px;">${label}</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">${val.trim()}</div></div>`
+        : '';
+
+      // Build the complete HTML for the PDF
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>${d.project} — Brainstorm</title>
+        <style>
+          body { font-family: 'DM Sans', 'Segoe UI', sans-serif; font-size: 14px; color: #1a1a1a; background: #faf9f7; padding: 48px; max-width: 760px; margin: 0 auto; }
+          h1 { font-family: monospace; font-size: 26px; font-weight: 400; letter-spacing: -0.02em; border-bottom: 1.5px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 6px; }
+          .meta { font-family: monospace; font-size: 10px; color: #888; margin-bottom: 32px; }
+          .section-title { font-family: monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #aaa; border-bottom: 0.5px solid #e8e4dc; padding-bottom: 4px; margin: 28px 0 16px; }
+          .chip { display: inline-block; font-family: monospace; font-size: 10px; padding: 3px 10px; border: 0.5px solid #1a1a1a; border-radius: 2px; margin: 3px 4px 3px 0; }
+          @media print { body { padding: 24px; } @page { margin: 1.5cm; } }
+        </style>
+      </head><body>
+        <h1>${d.project || 'Untitled Project'}</h1>
+        <div class="meta">Portfolio prep — CDP Columbia University &nbsp;|&nbsp; ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+
+        <div class="section-title">01 — The project in plain language</div>
+        ${row('What is it', d['what-is-it'])}
+        ${row('What problem does it solve', d['problem'])}
+        ${row('Who is it for', d['audience'])}
+
+        <div class="section-title">02 — Intention &amp; origin</div>
+        ${row('Why did you do this', d['why'])}
+        ${row('The core question', d['question'])}
+        ${row('Starting assumptions', d['assumptions'])}
+
+        <div class="section-title">03 — Process &amp; tools</div>
+        ${row('Step by step', d['process'])}
+        ${row('Tools &amp; methods', d['tools'])}
+        ${row('Where it got hard', d['hard'])}
+        ${row('Key insight', d['insight'])}
+
+        <div class="section-title">04 — Outcomes &amp; evidence</div>
+        ${row('What did you produce', d['outputs'])}
+        ${row('What it showed or proved', d['findings'])}
+        ${row("What you'd do differently", d['differently'])}
+
+        <div class="section-title">05 — Portfolio framing</div>
+        ${row('One-line description', d['oneliner'])}
+        ${row('Portfolio narrative role', d['narrative-role'])}
+        ${row('Hero visual', d['hero'])}
+        ${d.skills && d.skills.length ? '<div style="margin-bottom:20px;"><div style="font-family:monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#888;margin-bottom:8px;">Skills to highlight</div>' + d.skills.map(s => `<span class="chip">${s}</span>`).join('') + '</div>' : ''}
+        ${d.audienceTags && d.audienceTags.length ? '<div style="margin-bottom:20px;"><div style="font-family:monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#888;margin-bottom:8px;">Target audience</div>' + d.audienceTags.map(s => `<span class="chip">${s}</span>`).join('') + '</div>' : ''}
+
+        <div class="section-title">06 — Gut check</div>
+        ${d.pride ? `<div style="margin-bottom:12px;"><span style="font-family:monospace;font-size:10px;color:#888;text-transform:uppercase;">Proud of this?</span> &nbsp;<strong>${d.pride}</strong></div>` : ''}
+        ${d.talk ? `<div style="margin-bottom:12px;"><span style="font-family:monospace;font-size:10px;color:#888;text-transform:uppercase;">Can talk about it?</span> &nbsp;<strong>${d.talk}</strong></div>` : ''}
+        ${row('Weakest part', d['weakness'])}
+        ${row('Notes', d['notes'])}
+
+        <div class="section-title">07 — Sketch / handwritten notes</div>
+        ${sketchImg}
+      </body></html>`;
+
+      // Open in a new window and trigger the print/save dialog
+      const win = window.open('', '_blank');
+      win.document.write(html);
+      win.document.close();
+      // Small delay so fonts and images load before the print dialog opens
+      win.onload = () => { win.focus(); win.print(); };
+      showToast('Opening PDF...');
     };
 
     // ---- ARCHIVE PANEL ----
